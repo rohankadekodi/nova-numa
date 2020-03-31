@@ -152,7 +152,7 @@ static int nova_get_nvmm_info(struct super_block *sb,
 		return -EINVAL;
 	}
 
-	size2 = dax_direct_access(sbi->s_dax_dev, 524800, LONG_MAX/PAGE_SIZE,
+	size2 = dax_direct_access(sbi->s_dax_dev, (((512*PAGE_SIZE) + size) / PAGE_SIZE), LONG_MAX/PAGE_SIZE,
 				  &virt_addr2, &__pfn_t_2) * PAGE_SIZE;
 	if (size <= 0) {
 		nova_err(sb, "second direct access failed\n");

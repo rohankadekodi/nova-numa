@@ -2,3 +2,8 @@
 *.ko
 *cscope*
 *.cmd
+.tmp_versions/nova.mod
+Module.symvers
+modules.order
+nova.ko
+nova.mod.c
