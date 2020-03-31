@@ -92,7 +92,28 @@ static inline int get_block_cpuid(struct nova_sb_info *sbi,
 {
 	int idx = 0;
 	int cpuid = 0;
+	unsigned long tmp_blocknr = 0;
 	struct free_list *free_list;
+	
+	if (blocknr < sbi->num_blocks) {
+		idx = blocknr / sbi->per_list_blocks;
+		free_list = nova_get_free_list(sbi->sb, idx);
+		if (free_list->block_start > blocknr)
+			cpuid = idx - 1;
+		else
+			cpuid = idx;
+	} else {
+		tmp_blocknr = sbi->num_blocks - 1;
+		idx = tmp_blocknr / sbi->per_list_blocks;
+		free_list = nova_get_free_list(sbi->sb, idx);
+		if (free_list->block_start < sbi->num_blocks)
+			BUG();
+
+		tmp_blocknr = blocknr - free_list->csum_start;		
+		cpuid = idx + (tmp_blocknr / sbi->per_list_blocks);		
+	}
+
+	/*
 	for (idx = 0; idx < sbi->cpus; idx++) {
 		free_list = nova_get_free_list(sbi->sb, cpuid);
 		if (free_list->block_start <= blocknr && free_list->block_end >= blocknr) {
@@ -100,6 +121,11 @@ static inline int get_block_cpuid(struct nova_sb_info *sbi,
 			break;
 		}
 	}
+
+	if (cpuid_opt != cpuid) {
+		printk(KERN_INFO "%s: cpuid_opt = %d, cpuid = %d, blocknr = %lu\n", __func__, cpuid_opt, cpuid, blocknr);
+	}
+	*/
 
 	/*
 	int block_cpu_index = blocknr / sbi->per_list_blocks;
