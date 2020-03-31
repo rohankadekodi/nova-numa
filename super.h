@@ -111,6 +111,8 @@ struct nova_sb_info {
 	unsigned long	num_blocks;
 	unsigned long   num_blocks_2;
 
+	unsigned long   second_start_freelist_idx;
+
 	/* TODO: Remove this, since it's unused */
 	/*
 	 * Backing store option:

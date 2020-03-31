@@ -127,6 +127,7 @@ static void nova_init_free_list(struct super_block *sb,
 	unsigned long per_list_blocks;
 	struct free_list *prev_free_list;
 	unsigned long next_list_end;
+	unsigned long second_start = sbi->num_blocks + ((sbi->virt_addr_2 - (sbi->virt_addr + sbi->initsize))/sbi->blocksize);	
 	
 	per_list_blocks = (sbi->num_blocks + sbi->num_blocks_2) / sbi->cpus;
 
@@ -138,10 +139,15 @@ static void nova_init_free_list(struct super_block *sb,
 
 	if (index > 0) {
 		prev_free_list = nova_get_free_list(sb, index-1);
-		if (free_list->block_start >= sbi->num_blocks && prev_free_list->block_end < sbi->num_blocks)
-			free_list->block_start = sbi->num_blocks + ((sbi->virt_addr_2 - (sbi->virt_addr + sbi->initsize))/sbi->blocksize);
-		else if (free_list->block_start >= sbi->num_blocks)
-			free_list->block_start = prev_free_list->block_end + 1;
+
+		if (free_list->block_start >= sbi->num_blocks && prev_free_list->block_end < sbi->num_blocks) {
+			free_list->block_start = second_start;
+			sbi->second_start_freelist_idx = index;
+
+		} else if (free_list->block_start >= sbi->num_blocks) {
+			free_list->block_start = second_start + ((index - sbi->second_start_freelist_idx) * per_list_blocks);
+			//free_list->block_start = prev_free_list->block_end + 1;
+		}
 	}
 
 	free_list->block_end = free_list->block_start +
