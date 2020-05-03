@@ -169,12 +169,12 @@ static inline void nova_flush_buffer(void *buf, uint32_t len, bool fence)
 			//emulate_latency_ns(NVM_LATENCY);
 		}
 	}
-	
+
 	// Rohan add write delay
 #ifdef CONFIG_LEDGER
 	perfmodel_add_delay(0, len);
 #endif
-	
+
 	/* Do a fence only if asked. We often don't need to do a fence
 	 * immediately after clflush because even if we get context switched
 	 * between clflush and subsequent fence, the context switch operation

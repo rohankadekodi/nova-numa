@@ -262,10 +262,8 @@ static inline int memcpy_to_pmem_nocache(void *dst, const void *src,
 {
 	int ret;
 
-#ifdef CONFIG_LEDGER
-	size_t len = size + ((unsigned long)(dst) & (CACHELINE_SIZE - 1));
-#endif
-	
+    size_t len = size + ((unsigned long)(dst) & (CACHELINE_SIZE - 1));
+
 	ret = __copy_from_user_inatomic_nocache(dst, src, size);
 	//    int i;
 	//    for (i = 0; i < len; i += CACHELINE_SIZE)
@@ -329,7 +327,7 @@ static inline void memset_nt(void *dest, uint32_t dword, size_t length)
 static inline void *nova_get_block(struct super_block *sb, u64 block)
 {
 	struct nova_super_block *ps = nova_get_super(sb);
-	
+
 	return block ? ((void *)ps + block) : NULL;
 }
 
@@ -348,9 +346,7 @@ static inline u64
 nova_get_addr_off(struct nova_sb_info *sbi, void *addr)
 {
 	NOVA_ASSERT((addr >= sbi->virt_addr) &&
-		    (addr < (sbi->virt_addr_2 + sbi->initsize_2)) &&
-		    (addr < (sbi->virt_addr + sbi->initsize) || addr >= sbi->virt_addr_2));
-	
+			(addr < (sbi->virt_addr + sbi->initsize)));
 	return (u64)(addr - sbi->virt_addr);
 }
 
@@ -568,12 +564,10 @@ static inline unsigned long get_nvmm(struct super_block *sb,
 	struct nova_inode_info_header *sih,
 	struct nova_file_write_entry *entry, unsigned long pgoff)
 {
-
 	/* entry is already verified before this call and resides in dram
 	 * or we can do memcpy_mcsafe here but have to avoid double copy and
 	 * verification of the entry.
 	 */
-	
 	if (entry->pgoff > pgoff || (unsigned long) entry->pgoff +
 			(unsigned long) entry->num_pages <= pgoff) {
 		struct nova_sb_info *sbi = NOVA_SB(sb);
@@ -590,7 +584,6 @@ static inline unsigned long get_nvmm(struct super_block *sb,
 
 	return (unsigned long) (entry->block >> PAGE_SHIFT) + pgoff
 		- entry->pgoff;
-
 }
 
 bool nova_verify_entry_csum(struct super_block *sb, void *entry, void *entryc);
@@ -645,7 +638,7 @@ nova_get_blocknr(struct super_block *sb, u64 block, unsigned short btype)
 }
 
 static inline unsigned long nova_get_pfn(struct super_block *sb, u64 block)
-{	
+{
 	return (NOVA_SB(sb)->phys_addr + block) >> PAGE_SHIFT;
 }
 
@@ -789,8 +782,6 @@ static inline void nova_inc_page_invalid_entries(struct super_block *sb,
 				curr,
 				curr_page->page_tail.num_entries,
 				curr_page->page_tail.invalid_entries);
-		printk(KERN_INFO "%s: invalid entry, so printing log entry\n", __func__);
-		BUG();
 		nova_print_log_entry(sb, old_curr);
 	}
 
