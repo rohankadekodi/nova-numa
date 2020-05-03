@@ -145,19 +145,23 @@ static int nova_get_nvmm_info(struct super_block *sb,
 	}
 	sbi->s_dax_dev = dax_dev;
 
+	printk(KERN_INFO "%s: doing first direct access\n", __func__);
 	size = dax_direct_access(sbi->s_dax_dev, 0, LONG_MAX/PAGE_SIZE,
 				 &virt_addr, &__pfn_t) * PAGE_SIZE;
 	if (size <= 0) {
 		nova_err(sb, "direct_access failed\n");
 		return -EINVAL;
 	}
+	printk(KERN_INFO "%s: first direct access returned size = %lu\n", __func__, size);
+	printk(KERN_INFO "%s: doing second direct access\n", __func__);
 
 	size2 = dax_direct_access(sbi->s_dax_dev, (((512*PAGE_SIZE) + size) / PAGE_SIZE), LONG_MAX/PAGE_SIZE,
 				  &virt_addr2, &__pfn_t_2) * PAGE_SIZE;
-	if (size <= 0) {
+	if (size2 <= 0) {
 		nova_err(sb, "second direct access failed\n");
 		return -EINVAL;
 	}
+	printk(KERN_INFO "%s: second direct access returned size = %lu\n", __func__, size2);
     
 	sbi->virt_addr = virt_addr;
 	sbi->virt_addr_2 = virt_addr2;
