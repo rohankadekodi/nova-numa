@@ -431,6 +431,7 @@ static int nova_append_log_entry(struct super_block *sb,
 	nova_memlock_range(sb, entry, size);
 	update->curr_entry = curr_p;
 	update->tail = curr_p + size;
+	
 
 	if (metadata_csum) {
 		alter_curr_p = nova_get_append_head(sb, pi, sih, alter_tail,
@@ -479,6 +480,7 @@ int nova_inplace_update_log_entry(struct super_block *sb,
 	spin_lock(&sbi->journal_locks[cpu]);
 	nova_memunlock_journal(sb);
 	journal_tail = nova_create_logentry_transaction(sb, entry, type, cpu);
+
 	nova_update_log_entry(sb, inode, entry, entry_info);
 
 	PERSISTENT_BARRIER();
@@ -1139,7 +1141,7 @@ int nova_allocate_inode_log_pages(struct super_block *sb,
 	}
 
 	*new_block = nova_get_block_off(sb, first_blocknr,
-						NOVA_BLOCK_TYPE_4K);
+					NOVA_BLOCK_TYPE_4K);
 
 	return ret_pages;
 }

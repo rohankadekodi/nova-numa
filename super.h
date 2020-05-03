@@ -21,6 +21,7 @@ struct nova_super_block {
 	__le32		s_padding32;
 	__le32		s_blocksize;		/* blocksize in bytes */
 	__le64		s_size;			/* total size of fs in bytes */
+	__le64          s_size_2;
 	char		s_volume_name[16];	/* volume name */
 
 	/* all the dynamic fields should go here */
@@ -102,11 +103,16 @@ struct nova_sb_info {
 	 * the pointer to the super block)
 	 */
 	phys_addr_t	phys_addr;
+	phys_addr_t	phys_addr_2;
 	void		*virt_addr;
+	void            *virt_addr_2;
 	void		*replica_reserved_inodes_addr;
 	void		*replica_sb_addr;
 
 	unsigned long	num_blocks;
+	unsigned long   num_blocks_2;
+
+	unsigned long   second_start_freelist_idx;
 
 	/* TODO: Remove this, since it's unused */
 	/*
@@ -120,6 +126,7 @@ struct nova_sb_info {
 	unsigned long	bpi;
 	unsigned long	blocksize;
 	unsigned long	initsize;
+	unsigned long   initsize_2;
 	unsigned long	s_mount_opt;
 	kuid_t		uid;    /* Mount uid for root directory */
 	kgid_t		gid;    /* Mount gid for root directory */

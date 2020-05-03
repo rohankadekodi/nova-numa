@@ -90,7 +90,50 @@ inline void set_bm(unsigned long bit, struct scan_bitmap *bm,
 static inline int get_block_cpuid(struct nova_sb_info *sbi,
 	unsigned long blocknr)
 {
-	return blocknr / sbi->per_list_blocks;
+	int idx = 0;
+	int cpuid = 0;
+	unsigned long tmp_blocknr = 0;
+	struct free_list *free_list;
+	
+	if (blocknr < sbi->num_blocks) {
+		idx = blocknr / sbi->per_list_blocks;
+		free_list = nova_get_free_list(sbi->sb, idx);
+		if (free_list->block_start > blocknr)
+			cpuid = idx - 1;
+		else
+			cpuid = idx;
+	} else {
+		tmp_blocknr = sbi->num_blocks - 1;
+		idx = tmp_blocknr / sbi->per_list_blocks;
+		free_list = nova_get_free_list(sbi->sb, idx);
+		if (free_list->block_start < sbi->num_blocks)
+			BUG();
+
+		tmp_blocknr = blocknr - free_list->csum_start;		
+		cpuid = idx + (tmp_blocknr / sbi->per_list_blocks);		
+	}
+
+	/*
+	for (idx = 0; idx < sbi->cpus; idx++) {
+		free_list = nova_get_free_list(sbi->sb, cpuid);
+		if (free_list->block_start <= blocknr && free_list->block_end >= blocknr) {
+			cpuid = idx;
+			break;
+		}
+	}
+
+	if (cpuid_opt != cpuid) {
+		printk(KERN_INFO "%s: cpuid_opt = %d, cpuid = %d, blocknr = %lu\n", __func__, cpuid_opt, cpuid, blocknr);
+	}
+	*/
+
+	/*
+	int block_cpu_index = blocknr / sbi->per_list_blocks;
+
+	if (blocknr >= sbi->num_blocks && (block_cpu_index * sbi->per_list_blocks) < sbi->num_blocks)
+		block_cpu_index++;
+	*/
+	return cpuid;
 }
 
 static int nova_failure_insert_inodetree(struct super_block *sb,
@@ -645,7 +688,7 @@ static void nova_update_4K_map(struct super_block *sb,
 struct scan_bitmap *global_bm[MAX_CPUS];
 
 static int nova_build_blocknode_map(struct super_block *sb,
-	unsigned long initsize)
+				    unsigned long initsize, unsigned long initsize_2)
 {
 	struct nova_sb_info *sbi = NOVA_SB(sb);
 	struct scan_bitmap *bm;
@@ -660,7 +703,7 @@ static int nova_build_blocknode_map(struct super_block *sb,
 		return -ENOMEM;
 
 	final_bm->scan_bm_4K.bitmap_size =
-				(initsize >> (PAGE_SHIFT + 0x3));
+		((initsize + initsize_2) >> (PAGE_SHIFT + 0x3));
 
 	/* Alloc memory to hold the block alloc bitmap */
 	final_bm->scan_bm_4K.bitmap = kzalloc(final_bm->scan_bm_4K.bitmap_size,
@@ -723,7 +766,7 @@ static void free_bm(struct super_block *sb)
 	}
 }
 
-static int alloc_bm(struct super_block *sb, unsigned long initsize)
+static int alloc_bm(struct super_block *sb, unsigned long initsize, unsigned long initsize_2)
 {
 	struct nova_sb_info *sbi = NOVA_SB(sb);
 	struct scan_bitmap *bm;
@@ -737,11 +780,11 @@ static int alloc_bm(struct super_block *sb, unsigned long initsize)
 		global_bm[i] = bm;
 
 		bm->scan_bm_4K.bitmap_size =
-				(initsize >> (PAGE_SHIFT + 0x3));
+			((initsize + initsize_2) >> (PAGE_SHIFT + 0x3));
 		bm->scan_bm_2M.bitmap_size =
-				(initsize >> (PAGE_SHIFT_2M + 0x3));
+			((initsize + initsize_2) >> (PAGE_SHIFT_2M + 0x3));
 		bm->scan_bm_1G.bitmap_size =
-				(initsize >> (PAGE_SHIFT_1G + 0x3));
+			((initsize + initsize_2) >> (PAGE_SHIFT_1G + 0x3));
 
 		/* Alloc memory to hold the block alloc bitmap */
 		bm->scan_bm_4K.bitmap = kzalloc(bm->scan_bm_4K.bitmap_size,
@@ -1533,6 +1576,7 @@ int nova_recovery(struct super_block *sb)
 	struct nova_sb_info *sbi = NOVA_SB(sb);
 	struct nova_super_block *super = sbi->nova_sb;
 	unsigned long initsize = le64_to_cpu(super->s_size);
+	unsigned long initsize_2 = le64_to_cpu(super->s_size_2);
 	bool value = false;
 	int ret = 0;
 	timing_t start, end;
@@ -1545,6 +1589,7 @@ int nova_recovery(struct super_block *sb)
 
 	NOVA_START_TIMING(recovery_t, start);
 	sbi->num_blocks = ((unsigned long)(initsize) >> PAGE_SHIFT);
+	sbi->num_blocks_2 = ((unsigned long)(initsize_2) >> PAGE_SHIFT);
 
 	/* initialize free list info */
 	nova_init_blockmap(sb, 1);
@@ -1554,7 +1599,7 @@ int nova_recovery(struct super_block *sb)
 		nova_dbg("NOVA: Normal shutdown\n");
 	} else {
 		nova_dbg("NOVA: Failure recovery\n");
-		ret = alloc_bm(sb, initsize);
+		ret = alloc_bm(sb, initsize, initsize_2);
 		if (ret)
 			goto out;
 
@@ -1573,7 +1618,7 @@ int nova_recovery(struct super_block *sb)
 		if (ret)
 			goto out;
 
-		ret = nova_build_blocknode_map(sb, initsize);
+		ret = nova_build_blocknode_map(sb, initsize, initsize_2);
 	}
 
 out:

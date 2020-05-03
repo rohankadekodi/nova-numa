@@ -422,10 +422,12 @@ int nova_remove_dentry(struct dentry *dentry, int dec_link,
 			update->alter_tail = sih->alter_log_tail;
 		}
 		sih->trans_id++;
+		
 		goto out;
 	}
 
 	loglen = NOVA_DIR_LOG_REC_LEN(entry->len);
+	
 	ret = nova_append_dentry(sb, pidir, dir, dentry,
 				0, loglen, update,
 				dec_link, epoch_id);
