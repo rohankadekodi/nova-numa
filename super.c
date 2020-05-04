@@ -120,8 +120,11 @@ static int nova_get_nvmm_info(struct super_block *sb,
 	struct nova_sb_info *sbi)
 {
 	void *virt_addr = NULL;
+	void *virt_addr2 = NULL;
 	pfn_t __pfn_t;
+	pfn_t __pfn_t_2;
 	long size;
+	long size2;
 	struct dax_device *dax_dev;
 	int ret;
 
@@ -142,29 +145,47 @@ static int nova_get_nvmm_info(struct super_block *sb,
 	}
 	sbi->s_dax_dev = dax_dev;
 
+	printk(KERN_INFO "%s: doing first direct access\n", __func__);
 	size = dax_direct_access(sbi->s_dax_dev, 0, LONG_MAX/PAGE_SIZE,
 				 &virt_addr, &__pfn_t) * PAGE_SIZE;
 	if (size <= 0) {
 		nova_err(sb, "direct_access failed\n");
 		return -EINVAL;
 	}
+	printk(KERN_INFO "%s: first direct access returned size = %lu\n", __func__, size);
+	printk(KERN_INFO "%s: doing second direct access\n", __func__);
 
+	/*
+	size2 = dax_direct_access(sbi->s_dax_dev, (((512*PAGE_SIZE) + size) / PAGE_SIZE), LONG_MAX/PAGE_SIZE,
+				  &virt_addr2, &__pfn_t_2) * PAGE_SIZE;
+	*/
+	size2 = dax_direct_access(sbi->s_dax_dev, ((size) / PAGE_SIZE), LONG_MAX/PAGE_SIZE,
+				  &virt_addr2, &__pfn_t_2) * PAGE_SIZE;
+	if (size2 <= 0) {
+		nova_err(sb, "second direct access failed\n");
+		return -EINVAL;
+	}
+	printk(KERN_INFO "%s: second direct access returned size = %lu\n", __func__, size2);
+    
 	sbi->virt_addr = virt_addr;
-
+	sbi->virt_addr_2 = virt_addr2;
+	
 	if (!sbi->virt_addr) {
 		nova_err(sb, "ioremap of the nova image failed(1)\n");
 		return -EINVAL;
 	}
 
 	sbi->phys_addr = pfn_t_to_pfn(__pfn_t) << PAGE_SHIFT;
+	sbi->phys_addr_2 = pfn_t_to_pfn(__pfn_t_2) << PAGE_SHIFT;
 	sbi->initsize = size;
-	sbi->replica_reserved_inodes_addr = virt_addr + size -
+	sbi->initsize_2 = size2;
+	sbi->replica_reserved_inodes_addr = virt_addr2 + size2 -
 			(sbi->tail_reserved_blocks << PAGE_SHIFT);
-	sbi->replica_sb_addr = virt_addr + size - PAGE_SIZE;
+	sbi->replica_sb_addr = virt_addr2 + size2 - PAGE_SIZE;
 
-	nova_dbg("%s: dev %s, phys_addr 0x%llx, virt_addr 0x%lx, size %ld\n",
+	nova_dbg("%s: dev %s, phys_addr 0x%llx, virt_addr 0x%lx, size %ld, virt_addr_end 0x%lx virt_addr_2 0x%lx, size2 %ld virt_addr_2_end 0x%lx\n",
 		__func__, sbi->s_bdev->bd_disk->disk_name,
-		sbi->phys_addr, (unsigned long)sbi->virt_addr, sbi->initsize);
+		 sbi->phys_addr, (unsigned long)sbi->virt_addr, sbi->initsize, (unsigned long) sbi->virt_addr + (unsigned long) sbi->initsize, (unsigned long)sbi->virt_addr_2, sbi->initsize_2, (unsigned long) sbi->virt_addr_2 + (unsigned long) sbi->initsize_2);
 
 	return 0;
 }
@@ -387,7 +408,7 @@ static inline void nova_update_mount_time(struct super_block *sb)
 }
 
 static struct nova_inode *nova_init(struct super_block *sb,
-				      unsigned long size)
+				    unsigned long size, unsigned long size2)
 {
 	unsigned long blocksize;
 	struct nova_inode *root_i, *pi;
@@ -398,8 +419,9 @@ static struct nova_inode *nova_init(struct super_block *sb,
 	timing_t init_time;
 
 	NOVA_START_TIMING(new_init_t, init_time);
-	nova_info("creating an empty nova of size %lu\n", size);
+	nova_info("creating an empty nova of size %lu\n", size + size2);
 	sbi->num_blocks = ((unsigned long)(size) >> PAGE_SHIFT);
+	sbi->num_blocks_2 = ((unsigned long)(size2) >>  PAGE_SHIFT);
 
 	nova_dbgv("nova: Default block size set to 4K\n");
 	sbi->blocksize = blocksize = NOVA_DEF_BLOCK_SIZE_4K;
@@ -446,6 +468,7 @@ static struct nova_inode *nova_init(struct super_block *sb,
 
 
 	sbi->nova_sb->s_size = cpu_to_le64(size);
+	sbi->nova_sb->s_size_2 = cpu_to_le64(size2);
 	sbi->nova_sb->s_blocksize = cpu_to_le32(blocksize);
 	sbi->nova_sb->s_magic = cpu_to_le32(NOVA_SUPER_MAGIC);
 	sbi->nova_sb->s_epoch_id = 0;
@@ -709,7 +732,7 @@ static int nova_fill_super(struct super_block *sb, void *data, int silent)
 
 	/* Init a new nova instance */
 	if (sbi->s_mount_opt & NOVA_MOUNT_FORMAT) {
-		root_pi = nova_init(sb, sbi->initsize);
+		root_pi = nova_init(sb, sbi->initsize, sbi->initsize_2);
 		retval = -ENOMEM;
 		if (IS_ERR(root_pi)) {
 			nova_err(sb, "%s: root_pi error.",
@@ -833,7 +856,7 @@ int nova_statfs(struct dentry *d, struct kstatfs *buf)
 	buf->f_type = NOVA_SUPER_MAGIC;
 	buf->f_bsize = sb->s_blocksize;
 
-	buf->f_blocks = sbi->num_blocks;
+	buf->f_blocks = sbi->num_blocks + sbi->num_blocks_2;
 	buf->f_bfree = buf->f_bavail = nova_count_free_blocks(sb);
 	buf->f_files = LONG_MAX;
 	buf->f_ffree = LONG_MAX - sbi->s_inodes_used_count;
