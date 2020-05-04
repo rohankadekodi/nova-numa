@@ -31,8 +31,15 @@ static inline int nova_range_check(struct super_block *sb, void *p,
 					 unsigned long len)
 {
 	struct nova_sb_info *sbi = NOVA_SB(sb);
+	unsigned long first_virt_end = (unsigned long) sbi->virt_addr + (unsigned long) sbi->initsize;
+	unsigned long second_virt_end = (unsigned long) sbi->virt_addr_2 + (unsigned long) sbi->initsize_2;
+	unsigned long first_virt_start = (unsigned long) sbi->virt_addr;
+	unsigned long second_virt_start = (unsigned long) sbi->virt_addr_2;
 
-	if (p < sbi->virt_addr || (p >= (sbi->virt_addr + sbi->initsize) && p < sbi->virt_addr_2) || (p + len >= (sbi->virt_addr + sbi->initsize) && p + len < sbi->virt_addr_2) || p + len >= (sbi->virt_addr_2 + sbi->initsize_2)) {
+	if ((unsigned long) p < first_virt_start ||
+	    ((unsigned long) p >= first_virt_end && (unsigned long) p < second_virt_start) ||
+	    ((unsigned long) p + len >= first_virt_end && (unsigned long) p + len < second_virt_start) ||
+	    (unsigned long) p + len >= second_virt_end) {
 		nova_err(sb, "access pmem out of range: pmem range 0x%lx - 0x%lx, "
 				"access range 0x%lx - 0x%lx\n",
 				(unsigned long)sbi->virt_addr,

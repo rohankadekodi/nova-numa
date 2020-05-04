@@ -329,6 +329,21 @@ static inline void memset_nt(void *dest, uint32_t dword, size_t length)
 static inline void *nova_get_block(struct super_block *sb, u64 block)
 {
 	struct nova_super_block *ps = nova_get_super(sb);
+	unsigned long target_addr = block ? (unsigned long) ps + (unsigned long) block : 0;
+	struct nova_sb_info *sbi = NOVA_SB(sb);
+	unsigned long first_virt_end = (unsigned long) sbi->virt_addr + (unsigned long) sbi->initsize;
+	unsigned long second_virt_end = (unsigned long) sbi->virt_addr_2 + (unsigned long) sbi->initsize_2;
+	unsigned long first_virt_start = (unsigned long) sbi->virt_addr;
+	unsigned long second_virt_start = (unsigned long) sbi->virt_addr_2;
+	
+	if (target_addr) {
+		if ((target_addr < first_virt_start) ||
+		    (target_addr >= second_virt_end) ||
+		    (target_addr >= first_virt_end && target_addr < second_virt_start)) {
+			dump_stack();
+			BUG();
+		}
+	}
 	
 	return block ? ((void *)ps + block) : NULL;
 }
@@ -568,10 +583,15 @@ static inline unsigned long get_nvmm(struct super_block *sb,
 	struct nova_inode_info_header *sih,
 	struct nova_file_write_entry *entry, unsigned long pgoff)
 {
+	unsigned long ret_value;
+	struct nova_sb_info *sbi = NOVA_SB(sb);
+	void *temp_block;
+
 	/* entry is already verified before this call and resides in dram
 	 * or we can do memcpy_mcsafe here but have to avoid double copy and
 	 * verification of the entry.
 	 */
+	
 	if (entry->pgoff > pgoff || (unsigned long) entry->pgoff +
 			(unsigned long) entry->num_pages <= pgoff) {
 		struct nova_sb_info *sbi = NOVA_SB(sb);
@@ -586,8 +606,12 @@ static inline unsigned long get_nvmm(struct super_block *sb,
 		NOVA_ASSERT(0);
 	}
 
-	return (unsigned long) (entry->block >> PAGE_SHIFT) + pgoff
+	ret_value = (unsigned long) (entry->block >> PAGE_SHIFT) + pgoff
 		- entry->pgoff;
+
+	temp_block =  nova_get_block(sb, (ret_value << PAGE_SHIFT));
+		
+	return ret_value;
 }
 
 bool nova_verify_entry_csum(struct super_block *sb, void *entry, void *entryc);
@@ -643,6 +667,20 @@ nova_get_blocknr(struct super_block *sb, u64 block, unsigned short btype)
 
 static inline unsigned long nova_get_pfn(struct super_block *sb, u64 block)
 {
+	struct nova_sb_info *sbi = NOVA_SB(sb);
+	unsigned long first_phys_start = (unsigned long) sbi->phys_addr;
+	unsigned long first_phys_end = (unsigned long) sbi->phys_addr + (unsigned long) sbi->initsize;
+	unsigned long second_phys_start = (unsigned long) sbi->phys_addr_2;
+	unsigned long second_phys_end = (unsigned long) sbi->phys_addr_2 + (unsigned long) sbi->initsize_2;
+	unsigned long target_addr = sbi->phys_addr + block;
+	
+	if (target_addr < first_phys_start ||
+	    target_addr >= second_phys_end ||
+	    (target_addr >= first_phys_end && target_addr < second_phys_start)) {
+		dump_stack();
+		BUG();
+	}
+	
 	return (NOVA_SB(sb)->phys_addr + block) >> PAGE_SHIFT;
 }
 

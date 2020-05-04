@@ -155,7 +155,11 @@ static int nova_get_nvmm_info(struct super_block *sb,
 	printk(KERN_INFO "%s: first direct access returned size = %lu\n", __func__, size);
 	printk(KERN_INFO "%s: doing second direct access\n", __func__);
 
+	/*
 	size2 = dax_direct_access(sbi->s_dax_dev, (((512*PAGE_SIZE) + size) / PAGE_SIZE), LONG_MAX/PAGE_SIZE,
+				  &virt_addr2, &__pfn_t_2) * PAGE_SIZE;
+	*/
+	size2 = dax_direct_access(sbi->s_dax_dev, ((size) / PAGE_SIZE), LONG_MAX/PAGE_SIZE,
 				  &virt_addr2, &__pfn_t_2) * PAGE_SIZE;
 	if (size2 <= 0) {
 		nova_err(sb, "second direct access failed\n");
@@ -172,15 +176,16 @@ static int nova_get_nvmm_info(struct super_block *sb,
 	}
 
 	sbi->phys_addr = pfn_t_to_pfn(__pfn_t) << PAGE_SHIFT;
+	sbi->phys_addr_2 = pfn_t_to_pfn(__pfn_t_2) << PAGE_SHIFT;
 	sbi->initsize = size;
 	sbi->initsize_2 = size2;
-	sbi->replica_reserved_inodes_addr = virt_addr + size + size2 -
+	sbi->replica_reserved_inodes_addr = virt_addr2 + size2 -
 			(sbi->tail_reserved_blocks << PAGE_SHIFT);
-	sbi->replica_sb_addr = virt_addr + size + size2 - PAGE_SIZE;
+	sbi->replica_sb_addr = virt_addr2 + size2 - PAGE_SIZE;
 
-	nova_dbg("%s: dev %s, phys_addr 0x%llx, virt_addr 0x%lx, size %ld\n",
+	nova_dbg("%s: dev %s, phys_addr 0x%llx, virt_addr 0x%lx, size %ld, virt_addr_end 0x%lx virt_addr_2 0x%lx, size2 %ld virt_addr_2_end 0x%lx\n",
 		__func__, sbi->s_bdev->bd_disk->disk_name,
-		sbi->phys_addr, (unsigned long)sbi->virt_addr, sbi->initsize + sbi->initsize_2);
+		 sbi->phys_addr, (unsigned long)sbi->virt_addr, sbi->initsize, (unsigned long) sbi->virt_addr + (unsigned long) sbi->initsize, (unsigned long)sbi->virt_addr_2, sbi->initsize_2, (unsigned long) sbi->virt_addr_2 + (unsigned long) sbi->initsize_2);
 
 	return 0;
 }

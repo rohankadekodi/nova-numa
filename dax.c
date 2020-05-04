@@ -891,7 +891,6 @@ static int nova_dax_get_blocks(struct inode *inode, sector_t iblock,
 	int ret = 0;
 	timing_t get_block_time;
 
-
 	if (max_blocks == 0)
 		return 0;
 
@@ -915,6 +914,7 @@ again:
 	if (entry) {
 		if (create == 0 || inplace) {
 			nvmm = get_nvmm(sb, sih, entryc, iblock);
+			
 			nova_dbgv("%s: found pgoff %lu, block %lu\n",
 					__func__, iblock, nvmm);
 			goto out;
@@ -1014,6 +1014,7 @@ int nova_iomap_begin(struct inode *inode, loff_t offset, loff_t length,
 	bool new = false, boundary = false;
 	u32 bno;
 	int ret;
+	unsigned long diff_between_devs, byte_offset_in_dax, first_virt_end, second_virt_start;
 
 	ret = nova_dax_get_blocks(inode, first_block, max_blocks, &bno, &new,
 				  &boundary, flags & IOMAP_WRITE, taking_lock);
@@ -1036,7 +1037,19 @@ int nova_iomap_begin(struct inode *inode, loff_t offset, loff_t length,
 		iomap->blkno = (sector_t)bno << (blkbits - 9);
 		iomap->length = (u64)ret << blkbits;
 		iomap->flags |= IOMAP_F_MERGED;
+
+		byte_offset_in_dax = bno * PAGE_SIZE;
+		if (byte_offset_in_dax >= sbi->initsize) {
+			first_virt_end = (unsigned long) sbi->virt_addr + (unsigned long) sbi->initsize;
+			second_virt_start = (unsigned long) sbi->virt_addr_2;
+			diff_between_devs = second_virt_start - first_virt_end;
+			byte_offset_in_dax = byte_offset_in_dax - diff_between_devs;
+			iomap->blkno = (sector_t)byte_offset_in_dax >> 9;
+		}
+		
 	}
+
+	//printk(KERN_INFO "%s: iomap->offset = %lu, pos = %lu, pos & PAGE_MASK - iomap_offset = %lu, bno addr = 0x%lx, bno = %lu, bno << PAGE_SHIFT = %lu, sbi->initsize = %lu, sector = %lu\n", __func__, iomap->offset, offset, (offset & PAGE_MASK) - iomap->offset, nova_get_block(inode->i_sb, bno << PAGE_SHIFT), bno, bno << PAGE_SHIFT, sbi->initsize, iomap->blkno);
 
 	if (new)
 		iomap->flags |= IOMAP_F_NEW;
@@ -1110,8 +1123,10 @@ static int nova_dax_pfn_mkwrite(struct vm_fault *vmf)
 
 	inode_lock(inode);
 	size = (i_size_read(inode) + PAGE_SIZE - 1) >> PAGE_SHIFT;
-	if (vmf->pgoff >= size)
+	if (vmf->pgoff >= size) {
+		printk(KERN_INFO "%s: CALLING SIGBUS\n", __func__);
 		ret = VM_FAULT_SIGBUS;
+	}
 	else
 		ret = dax_pfn_mkwrite(vmf);
 	inode_unlock(inode);

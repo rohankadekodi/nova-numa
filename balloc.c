@@ -1010,12 +1010,12 @@ int nova_new_data_blocks(struct super_block *sb,
 			    sih->i_blk_type, zero, DATA, cpu, from_tail);
 	NOVA_END_TIMING(new_data_blocks_t, alloc_time);
 	if (allocated < 0) {
-		nova_dbgv("FAILED: Inode %lu, start blk %lu, "
+		nova_dbgv(KERN_INFO "FAILED: Inode %lu, start blk %lu, "
 			  "alloc %d data blocks from %lu to %lu\n",
 			  sih->ino, start_blk, allocated, *blocknr,
 			  *blocknr + allocated - 1);
 	} else {
-		nova_dbgv("Inode %lu, start blk %lu, "
+		nova_dbgv(KERN_INFO "Inode %lu, start blk %lu, "
 			  "alloc %d data blocks from %lu to %lu\n",
 			  sih->ino, start_blk, allocated, *blocknr,
 			  *blocknr + allocated - 1);
