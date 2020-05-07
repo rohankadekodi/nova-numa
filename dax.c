@@ -941,9 +941,15 @@ again:
 	update.alter_tail = sih->alter_log_tail;
 
 	/* Return initialized blocks to the user */
-	allocated = nova_new_data_blocks(sb, sih, &blocknr, iblock,
-				 num_blocks, ALLOC_INIT_ZERO, ANY_CPU,
-				 ALLOC_FROM_HEAD);
+	if (taking_lock) {
+		allocated = nova_new_data_blocks_timing(sb, sih, &blocknr, iblock,
+							num_blocks, ALLOC_INIT_ZERO, ANY_CPU,
+							ALLOC_FROM_HEAD);
+	} else {
+		allocated = nova_new_data_blocks(sb, sih, &blocknr, iblock,
+							num_blocks, ALLOC_INIT_ZERO, ANY_CPU,
+							ALLOC_FROM_HEAD);
+	}
 	if (allocated <= 0) {
 		nova_dbgv("%s alloc blocks failed %d\n", __func__,
 							allocated);

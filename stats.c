@@ -68,6 +68,7 @@ const char *Timingstring[TIMING_NUM] = {
 	/* Memory management */
 	"============== Memory management ===============",
 	"alloc_blocks",
+	"zero_blocks",
 	"new_data_blocks",
 	"new_log_blocks",
 	"free_blocks",

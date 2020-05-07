@@ -502,12 +502,6 @@ struct inode_map {
 	int			freed;
 };
 
-
-
-
-
-
-
 /* Old entry is freeable if it is appended after the latest snapshot */
 static inline int old_entry_freeable(struct super_block *sb, u64 epoch_id)
 {
