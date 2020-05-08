@@ -127,8 +127,14 @@ static void nova_init_free_list(struct super_block *sb,
 	unsigned long per_list_blocks;
 	struct free_list *prev_free_list;
 	unsigned long next_list_end;
-	unsigned long second_start = sbi->num_blocks + ((sbi->virt_addr_2 - (sbi->virt_addr + sbi->initsize))/sbi->blocksize);	
-	
+	unsigned long first_virt_start = (unsigned long) sbi->virt_addr;	
+        unsigned long first_virt_end = (unsigned long) sbi->virt_addr + (unsigned long) sbi->initsize;
+        unsigned long second_virt_start = (unsigned long) sbi->virt_addr_2;
+        unsigned long second_virt_end = second_virt_start + (unsigned long) sbi->initsize_2;
+
+	unsigned long second_start = (second_virt_start - first_virt_start) / PAGE_SIZE;
+        unsigned long second_end = second_start + sbi->num_blocks_2;
+
 	per_list_blocks = (sbi->num_blocks + sbi->num_blocks_2) / sbi->cpus;
 
 	free_list->block_start = per_list_blocks * index;
@@ -160,6 +166,14 @@ static void nova_init_free_list(struct super_block *sb,
 		}
 	}
 	
+        if (free_list->block_end >= second_end) {
+                free_list->block_end = second_end - 1;
+        }
+
+        if (free_list->block_end == second_end - 1) {
+                sbi->cpus = index + 1;
+        }
+
 	if (index == 0)
 		free_list->block_start += sbi->head_reserved_blocks;
 	if (index == sbi->cpus - 1)
@@ -204,8 +218,9 @@ void nova_init_blockmap(struct super_block *sb, int recovery)
 						free_list->block_start + 1;
 
 			blknode = nova_alloc_blocknode(sb);
-			if (blknode == NULL)
+			if (blknode == NULL) {
 				BUG();
+			}
 			blknode->range_low = free_list->block_start;
 			blknode->range_high = free_list->block_end;
 			nova_update_range_node_checksum(blknode);
