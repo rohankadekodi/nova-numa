@@ -162,7 +162,7 @@ static inline int nova_update_alter_inode(struct super_block *sb,
 	if (!alter_pi)
 		return -EINVAL;
 
-	memcpy_to_pmem_nocache(alter_pi, pi, sizeof(struct nova_inode));
+	memcpy_to_pmem_nocache(sb, alter_pi, pi, sizeof(struct nova_inode));
 	return 0;
 }
 

@@ -473,6 +473,7 @@ do_dax_mapping_read(struct file *filp, char __user *buf,
 	loff_t isize, pos;
 	size_t copied = 0, error = 0;
 	timing_t memcpy_time;
+	int cpuid = nova_get_cpuid(sb);
 
 	pos = *ppos;
 	index = pos >> PAGE_SHIFT;
@@ -569,6 +570,20 @@ skip_verify:
 		if (!zero) {
 			left = __copy_to_user(buf + copied,
 						dax_mem + offset, nr);
+
+			if ((unsigned long) (dax_mem) + offset >= (unsigned long) NOVA_SB(sb)->virt_addr_2) {
+				if (cpuid < 24 || (cpuid >= 47 && cpuid < 72)) {
+					NOVA_STATS_ADD(remote_reads_bytes, nr);
+				} else {
+					NOVA_STATS_ADD(local_reads_bytes, nr);
+				}		
+			} else {
+				if (cpuid >= 72 || (cpuid >= 24 && cpuid < 48)) {
+					NOVA_STATS_ADD(remote_reads_bytes, nr);
+				} else {
+					NOVA_STATS_ADD(local_reads_bytes, nr);
+				}		
+			}
 			// Rohan add read delay
 #ifdef CONFIG_LEDGER
 			perfmodel_add_delay(1, nr);
@@ -655,6 +670,8 @@ static ssize_t do_nova_cow_file_write(struct file *filp,
 	int try_inplace = 0;
 	u64 epoch_id;
 	u32 time;
+	int cpuid = nova_get_cpuid(sb);
+	int remote_write_flag = 0;
 
 	if (len == 0)
 		return 0;
@@ -737,7 +754,7 @@ static ssize_t do_nova_cow_file_write(struct file *filp,
 			bytes = count;
 
 		kmem = nova_get_block(inode->i_sb,
-			     nova_get_block_off(sb, blocknr, sih->i_blk_type));
+			     nova_get_block_off(sb, blocknr, sih->i_blk_type));		
 
 		if (offset || ((offset + bytes) & (PAGE_SIZE - 1)) != 0)  {
 			ret = nova_handle_head_tail_blocks(sb, inode, pos,
@@ -749,7 +766,7 @@ static ssize_t do_nova_cow_file_write(struct file *filp,
 		//		nova_dbg("Write: %p\n", kmem);
 		NOVA_START_TIMING(memcpy_w_nvmm_t, memcpy_time);
 		nova_memunlock_range(sb, kmem + offset, bytes);
-		copied = bytes - memcpy_to_pmem_nocache(kmem + offset,
+		copied = bytes - memcpy_to_pmem_nocache(sb, kmem + offset,
 						buf, bytes);
 		nova_memlock_range(sb, kmem + offset, bytes);
 		NOVA_END_TIMING(memcpy_w_nvmm_t, memcpy_time);

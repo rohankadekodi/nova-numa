@@ -102,7 +102,7 @@ static int nova_update_block_parity(struct super_block *sb, u8 *block,
 	nvmmptr = nova_get_parity_addr(sb, blocknr);
 
 	nova_memunlock_range(sb, nvmmptr, strp_size);
-	memcpy_to_pmem_nocache(nvmmptr, parity, strp_size);
+	memcpy_to_pmem_nocache(sb, nvmmptr, parity, strp_size);
 	nova_memlock_range(sb, nvmmptr, strp_size);
 
 	// TODO: The parity stripe is better checksummed for higher reliability.
@@ -226,15 +226,15 @@ int nova_update_block_csum_parity(struct super_block *sb,
 			nvmmptr = nova_get_data_csum_addr(sb, strp_nr, 0);
 			nvmmptr1 = nova_get_data_csum_addr(sb, strp_nr, 1);
 			nova_memunlock_range(sb, nvmmptr, csum_size * 8);
-			memcpy_to_pmem_nocache(nvmmptr, crc, csum_size * 8);
-			memcpy_to_pmem_nocache(nvmmptr1, crc, csum_size * 8);
+			memcpy_to_pmem_nocache(sb, nvmmptr, crc, csum_size * 8);
+			memcpy_to_pmem_nocache(sb, nvmmptr1, crc, csum_size * 8);
 			nova_memlock_range(sb, nvmmptr, csum_size * 8);
 		}
 
 		if (data_parity > 0) {
 			nvmmptr = nova_get_parity_addr(sb, blocknr);
 			nova_memunlock_range(sb, nvmmptr, strp_size);
-			memcpy_to_pmem_nocache(nvmmptr, parity, strp_size);
+			memcpy_to_pmem_nocache(sb, nvmmptr, parity, strp_size);
 			nova_memlock_range(sb, nvmmptr, strp_size);
 		}
 
@@ -348,7 +348,7 @@ int nova_restore_data(struct super_block *sb, unsigned long blocknr,
 	if (success) {
 		/* recovery success, repair the bad nvmm data */
 		nova_memunlock_range(sb, stripptr, strp_size);
-		memcpy_to_pmem_nocache(stripptr, strip, strp_size);
+		memcpy_to_pmem_nocache(sb, stripptr, strip, strp_size);
 		nova_memlock_range(sb, stripptr, strp_size);
 
 		/* return the good checksum */

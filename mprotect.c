@@ -419,7 +419,7 @@ int nova_mmap_to_new_blocks(struct vm_area_struct *vma,
 		/* Now copy from user buf */
 		NOVA_START_TIMING(memcpy_w_wb_t, memcpy_time);
 		nova_memunlock_range(sb, to_kmem, bytes);
-		copied = bytes - memcpy_to_pmem_nocache(to_kmem, from_kmem,
+		copied = bytes - memcpy_to_pmem_nocache(sb, to_kmem, from_kmem,
 							bytes);
 		nova_memlock_range(sb, to_kmem, bytes);
 		NOVA_END_TIMING(memcpy_w_wb_t, memcpy_time);

@@ -1104,7 +1104,7 @@ static int nova_copy_snapshot_list_to_nvmm(struct super_block *sb,
 	for (i = 0; i < list->num_pages; i++) {
 		/* Leave next_page field alone */
 		nova_memunlock_block(sb, curr_nvmm_addr);
-		memcpy_to_pmem_nocache(curr_nvmm_addr, (void *)curr_dram_addr,
+		memcpy_to_pmem_nocache(sb, curr_nvmm_addr, (void *)curr_dram_addr,
 						LOG_BLOCK_TAIL);
 		nova_memlock_block(sb, curr_nvmm_addr);
 

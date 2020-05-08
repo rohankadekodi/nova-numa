@@ -215,7 +215,7 @@ void nova_clear_last_page_tail(struct super_block *sb,
 
 	nvmm_addr = (char *)nova_get_block(sb, nvmm);
 	nova_memunlock_range(sb, nvmm_addr + offset, length);
-	memcpy_to_pmem_nocache(nvmm_addr + offset, sbi->zeroed_page, length);
+	memcpy_to_pmem_nocache(sb, nvmm_addr + offset, sbi->zeroed_page, length);
 	nova_memlock_range(sb, nvmm_addr + offset, length);
 
 	if (data_csum > 0)
@@ -331,7 +331,7 @@ static int nova_update_new_dentry(struct super_block *sb,
 	entry->trans_id = entry_info->trans_id;
 	entry->ino = entry_info->ino;
 	entry->name_len = dentry->d_name.len;
-	memcpy_to_pmem_nocache(entry->name, dentry->d_name.name,
+	memcpy_to_pmem_nocache(sb, entry->name, dentry->d_name.name,
 				dentry->d_name.len);
 	entry->name[dentry->d_name.len] = '\0';
 	entry->mtime = cpu_to_le32(dir->i_mtime.tv_sec);
@@ -363,7 +363,7 @@ static int nova_update_log_entry(struct super_block *sb, struct inode *inode,
 		if (entry_info->inplace)
 			nova_update_write_entry(sb, entry, entry_info);
 		else
-			memcpy_to_pmem_nocache(entry, entry_info->data,
+			memcpy_to_pmem_nocache(sb, entry, entry_info->data,
 				sizeof(struct nova_file_write_entry));
 		break;
 	case DIR_LOG:
@@ -379,11 +379,11 @@ static int nova_update_log_entry(struct super_block *sb, struct inode *inode,
 		nova_update_link_change_entry(inode, entry, entry_info);
 		break;
 	case MMAP_WRITE:
-		memcpy_to_pmem_nocache(entry, entry_info->data,
+		memcpy_to_pmem_nocache(sb, entry, entry_info->data,
 				sizeof(struct nova_mmap_entry));
 		break;
 	case SNAPSHOT_INFO:
-		memcpy_to_pmem_nocache(entry, entry_info->data,
+		memcpy_to_pmem_nocache(sb, entry, entry_info->data,
 				sizeof(struct nova_snapshot_info_entry));
 		break;
 	default:
@@ -1408,7 +1408,7 @@ int nova_free_inode_log(struct super_block *sb, struct nova_inode *pi,
 			alter_pi = (struct nova_inode *)nova_get_block(sb,
 						sih->alter_pi_addr);
 			if (alter_pi) {
-				memcpy_to_pmem_nocache(alter_pi, pi,
+				memcpy_to_pmem_nocache(sb, alter_pi, pi,
 						sizeof(struct nova_inode));
 			}
 		}

@@ -233,7 +233,7 @@ int nova_update_alter_entry(struct super_block *sb, void *entry)
 	if (ret)
 		return ret;
 
-	ret = memcpy_to_pmem_nocache(alter_entry, entry_copy, size);
+	ret = memcpy_to_pmem_nocache(sb, alter_entry, entry_copy, size);
 	return ret;
 }
 
@@ -281,7 +281,7 @@ static int nova_repair_entry(struct super_block *sb, void *bad, void *good,
 	int ret;
 
 	nova_memunlock_range(sb, bad, entry_size);
-	ret = memcpy_to_pmem_nocache(bad, good, entry_size);
+	ret = memcpy_to_pmem_nocache(sb, bad, good, entry_size);
 	nova_memlock_range(sb, bad, entry_size);
 
 	if (ret == 0)
@@ -431,7 +431,7 @@ static int nova_repair_inode(struct super_block *sb, struct nova_inode *bad_pi,
 	int ret;
 
 	nova_memunlock_inode(sb, bad_pi);
-	ret = memcpy_to_pmem_nocache(bad_pi, good_copy,
+	ret = memcpy_to_pmem_nocache(sb, bad_pi, good_copy,
 					sizeof(struct nova_inode));
 	nova_memlock_inode(sb, bad_pi);
 
@@ -576,9 +576,9 @@ copy:
 			memcpy(csum_addr, src_addr, NOVA_DATA_CSUM_LEN * 8);
 			memcpy(csum_addr1, src_addr, NOVA_DATA_CSUM_LEN * 8);
 		} else {
-			memcpy_to_pmem_nocache(csum_addr, src_addr,
+			memcpy_to_pmem_nocache(sb, csum_addr, src_addr,
 						NOVA_DATA_CSUM_LEN * 8);
-			memcpy_to_pmem_nocache(csum_addr1, src_addr,
+			memcpy_to_pmem_nocache(sb, csum_addr1, src_addr,
 						NOVA_DATA_CSUM_LEN * 8);
 		}
 		nova_memlock_range(sb, csum_addr, NOVA_DATA_CSUM_LEN * 8);
@@ -606,8 +606,8 @@ copy:
 		csum_addr1 = nova_get_data_csum_addr(sb, strp_nr, 1);
 
 		nova_memunlock_range(sb, csum_addr, NOVA_DATA_CSUM_LEN);
-		memcpy_to_pmem_nocache(csum_addr, &csum, NOVA_DATA_CSUM_LEN);
-		memcpy_to_pmem_nocache(csum_addr1, &csum, NOVA_DATA_CSUM_LEN);
+		memcpy_to_pmem_nocache(sb, csum_addr, &csum, NOVA_DATA_CSUM_LEN);
+		memcpy_to_pmem_nocache(sb, csum_addr1, &csum, NOVA_DATA_CSUM_LEN);
 		nova_memlock_range(sb, csum_addr, NOVA_DATA_CSUM_LEN);
 
 		strp_nr += 1;
@@ -821,13 +821,13 @@ bool nova_verify_data_csum(struct super_block *sb,
 							NOVA_DATA_CSUM_LEN);
 			if (csum_nvmm0 != csum_calc) {
 				csum_nvmm0 = cpu_to_le32(csum_calc);
-				memcpy_to_pmem_nocache(csum_addr0, &csum_nvmm0,
+				memcpy_to_pmem_nocache(sb, csum_addr0, &csum_nvmm0,
 							NOVA_DATA_CSUM_LEN);
 			}
 
 			if (csum_nvmm1 != csum_calc) {
 				csum_nvmm1 = cpu_to_le32(csum_calc);
-				memcpy_to_pmem_nocache(csum_addr1, &csum_nvmm1,
+				memcpy_to_pmem_nocache(sb, csum_addr1, &csum_nvmm1,
 							NOVA_DATA_CSUM_LEN);
 			}
 			nova_memlock_range(sb, csum_addr0, NOVA_DATA_CSUM_LEN);

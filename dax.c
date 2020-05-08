@@ -40,7 +40,7 @@ static inline int nova_copy_partial_block(struct super_block *sb,
 			rc = memcpy_mcsafe(kmem + offset, ptr + offset,
 						length);
 		else
-			memcpy_to_pmem_nocache(kmem + offset, ptr + offset,
+			memcpy_to_pmem_nocache(sb, kmem + offset, ptr + offset,
 						length);
 	}
 
@@ -62,7 +62,7 @@ static inline int nova_handle_partial_block(struct super_block *sb,
 		if (support_clwb)
 			memset(kmem + offset, 0, length);
 		else
-			memcpy_to_pmem_nocache(kmem + offset,
+			memcpy_to_pmem_nocache(sb, kmem + offset,
 					sbi->zeroed_page, length);
 	} else {
 		/* Copy from original block */
@@ -694,7 +694,7 @@ ssize_t do_nova_inplace_file_write(struct file *filp,
 //		nova_dbg("Write: %p\n", kmem);
 		NOVA_START_TIMING(memcpy_w_nvmm_t, memcpy_time);
 		nova_memunlock_range(sb, kmem + offset, bytes);
-		copied = bytes - memcpy_to_pmem_nocache(kmem + offset,
+		copied = bytes - memcpy_to_pmem_nocache(sb, kmem + offset,
 						buf, bytes);
 		nova_memlock_range(sb, kmem + offset, bytes);
 		NOVA_END_TIMING(memcpy_w_nvmm_t, memcpy_time);

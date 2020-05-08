@@ -368,11 +368,11 @@ inline void nova_sync_super(struct super_block *sb)
 
 	super_redund = nova_get_redund_super(sb);
 
-	memcpy_to_pmem_nocache((void *)super, (void *)sbi->nova_sb,
+	memcpy_to_pmem_nocache(sb, (void *)super, (void *)sbi->nova_sb,
 		sizeof(struct nova_super_block));
 	PERSISTENT_BARRIER();
 
-	memcpy_to_pmem_nocache((void *)super_redund, (void *)sbi->nova_sb,
+	memcpy_to_pmem_nocache(sb, (void *)super_redund, (void *)sbi->nova_sb,
 		sizeof(struct nova_super_block));
 	PERSISTENT_BARRIER();
 

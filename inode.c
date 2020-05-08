@@ -861,7 +861,7 @@ static int nova_free_inode_resource(struct super_block *sb,
 	if (metadata_csum && sih->alter_pi_addr) {
 		alter_pi = (struct nova_inode *)nova_get_block(sb,
 						sih->alter_pi_addr);
-		memcpy_to_pmem_nocache(alter_pi, pi, sizeof(struct nova_inode));
+		memcpy_to_pmem_nocache(sb, alter_pi, pi, sizeof(struct nova_inode));
 	}
 	nova_memlock_inode(sb, pi);
 
@@ -1143,7 +1143,7 @@ struct inode *nova_new_vfs_inode(enum nova_new_inode_type type,
 	if (metadata_csum) {
 		alter_pi = (struct nova_inode *)nova_get_block(sb,
 								alter_pi_addr);
-		memcpy_to_pmem_nocache(alter_pi, pi, sizeof(struct nova_inode));
+		memcpy_to_pmem_nocache(sb, alter_pi, pi, sizeof(struct nova_inode));
 	}
 
 	nova_memlock_inode(sb, pi);

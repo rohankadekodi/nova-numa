@@ -189,6 +189,10 @@ enum stats_category {
 	dax_new_blocks,
 	inplace_new_blocks,
 	fdatasync,
+	remote_writes_bytes,
+	local_writes_bytes,
+	remote_reads_bytes,
+	local_reads_bytes,
 
 	/* Sentinel */
 	STATS_NUM,

@@ -128,7 +128,7 @@ static void nova_undo_journal_inode(struct super_block *sb,
 	pi = (struct nova_inode *)nova_get_block(sb, pi_addr);
 	alter_pi = (struct nova_inode *)nova_get_block(sb, alter_pi_addr);
 
-	memcpy_to_pmem_nocache(pi, alter_pi, sizeof(struct nova_inode));
+	memcpy_to_pmem_nocache(sb, pi, alter_pi, sizeof(struct nova_inode));
 }
 
 static void nova_undo_journal_entry(struct super_block *sb,

@@ -156,7 +156,7 @@ static int nova_rebuild_inode_finish(struct super_block *sb,
 	if (metadata_csum) {
 		alter_pi = (struct nova_inode *)nova_get_block(sb,
 							sih->alter_pi_addr);
-		memcpy_to_pmem_nocache(alter_pi, pi, sizeof(struct nova_inode));
+		memcpy_to_pmem_nocache(sb, alter_pi, pi, sizeof(struct nova_inode));
 	}
 	nova_memlock_inode(sb, pi);
 

@@ -271,7 +271,7 @@ int nova_append_dir_init_entries(struct super_block *sb,
 		return -EINVAL;
 
 	nova_memunlock_inode(sb, alter_pi);
-	memcpy_to_pmem_nocache(alter_pi, pi, sizeof(struct nova_inode));
+	memcpy_to_pmem_nocache(sb, alter_pi, pi, sizeof(struct nova_inode));
 	nova_memlock_inode(sb, alter_pi);
 
 	return 0;

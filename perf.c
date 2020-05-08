@@ -67,7 +67,7 @@ static int to_pmem_nocache_call(char *dst, char *src, size_t off, size_t size)
 {
 	/* pin src address to cache most reads, if size fits */
 	/* dst address should point to pmem */
-	memcpy_to_pmem_nocache(dst + off, src, size);
+	memcpy_to_pmem_nocache(NULL, dst + off, src, size);
 	return 0;
 }
 
