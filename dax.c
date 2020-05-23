@@ -483,6 +483,10 @@ unsigned long nova_check_existing_entry(struct super_block *sb,
 	*inplace = 0;
 	entry = nova_get_write_entry(sb, sih, start_blk);
 
+    if (num_blocks > 512) {
+        num_blocks = 512;
+    }
+
 	entryc = (metadata_csum == 0) ? entry : ret_entryc;
 
 	if (entry) {

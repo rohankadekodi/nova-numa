@@ -17,7 +17,7 @@ void main() {
     unsigned long hugepages_flag_value = 0x40000000;
     int ret = 0;
 
-    sprintf(ioctl_file_name, "/mnt/pmem_emul/ioctl_file_%d", getpid());
+    sprintf(ioctl_file_name, "/mnt/pmem0/ioctl_file_%d", getpid());
 
     fd = open(ioctl_file_name, O_RDWR | O_CREAT, 0666);
     if (fd < 0) {
@@ -30,7 +30,7 @@ void main() {
         printf("%s: ioctl failed. Error = %s\n", __func__, strerror(errno));
         exit(-1);
     } else {
-        printf("%s: ioctl passed. Will print free list info\n", __func__, ret);
+        printf("%s: ioctl passed. Will print free lists\n", __func__, ret);
     }
 
     free(ioctl_file_name);
